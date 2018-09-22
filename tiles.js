@@ -48,14 +48,14 @@ var files = [
     "img/vitr4-9.png"
 ]
 
-var scale = 3.35,
+var scale = 3.5,
     width = 7.5,
     height = 15,
     margin = 0.3,
 
     scaledWidth = width * scale,
     scaledHeight = height * scale,
-    scaledMargin = margin * scale,
+    scaledMargin = 1, //margin * scale,
 
     nWidth = 33,
     nHeight = 10,
