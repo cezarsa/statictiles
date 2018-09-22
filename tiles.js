@@ -131,10 +131,7 @@ function doTileAreaMain(i, j) {
     div.setAttribute('data-i', i);
     div.setAttribute('data-j', j);
     div.className = "tile tile-area tile-area-grid tile-" + i + "-" + j;
-    if (i < cutHeight && j < cutWidth) {
-        div.className += " tile-ignored";
-    }
-    if (i < cutRightHeight && (nWidth - j) <= cutRightWidth) {
+    if (!validPos(i, j)) {
         div.className += " tile-ignored";
     }
     return div
@@ -183,7 +180,7 @@ function drawPattern() {
     origArea.parentNode.replaceChild(area, origArea);
 }
 
-function repositionTiles(tiles, save) {
+function repositionTiles(tiles) {
     for (var tileName in tiles) {
         var t = tiles[tileName];
         for (var idx = 0; idx < t.count; idx++) {
@@ -200,6 +197,52 @@ function repositionTiles(tiles, save) {
             }
         }
     }
+}
+
+function validPos(i, j) {
+    if ((i < cutHeight && j < cutWidth) || (i < cutRightHeight && (nWidth - j) <= cutRightWidth)) {
+        return false;
+    }
+    return true
+}
+
+function clearTiles() {
+    for (var tileName in gTiles) {
+        var t = gTiles[tileName];
+        for (var idx = 0; idx < t.count; idx++) {
+            delete gTiles[tileName].used[idx];
+        }
+    }
+    repositionTiles(gTiles);
+}
+
+
+function randomTiles() {
+    clearTiles();
+    for (var i = 0; i < nHeight; i++) {
+        for (var j = 0; j < nWidth; j++) {
+            if (!validPos(i, j)) {
+                continue;
+            }
+            while (true) {
+                var tileNames = Object.keys(gTiles);
+                var name = tileNames[parseInt(Math.random() * tileNames.length)];
+                var tile = gTiles[name];
+                if (Object.keys(tile.used).length == tile.count) {
+                    continue
+                }
+                for (var idx = 0; idx < tile.count; idx++) {
+                    if (tile.used[idx]) {
+                        continue
+                    }
+                    gTiles[name].used[idx] = { i: i, j: j };
+                    break
+                }
+                break
+            }
+        }
+    }
+    repositionTiles(gTiles);
 }
 
 var gTiles;
