@@ -314,13 +314,8 @@ function startDragdrop(tiles) {
 function saveTilesStorage(tiles) {
     var tilesStr = JSON.stringify(tiles);
     localStorage.setItem("tiles", tilesStr);
-    LZWAsync.compress({
-        input: tilesStr,
-        output: function (output) {
-            var baseOutput = encodeURIComponent(Base64.encode(output));
-            history.pushState({}, null, "?tiles=" + baseOutput);
-        }
-    });
+    var output = encodeURIComponent(base64js.fromByteArray(pako.deflate(JSON.stringify(gTiles))));
+    history.pushState({}, null, "?tiles=" + output);
 }
 
 function loadTilesStorage(tilesToMerge, cb) {
@@ -353,7 +348,15 @@ function tilesFromURL(cb) {
             LZWAsync.decompress({
                 input: raw,
                 output: function (output) {
-                    cb(JSON.parse(output));
+                    try {
+                        cb(JSON.parse(output));
+                    } catch (e) {
+                        var compressed = base64js.toByteArray(decodeURIComponent(tilesStr));
+                        var result = pako.inflate(compressed);
+                        var decoder = new TextDecoder('utf-8');
+                        var raw = decoder.decode(result);
+                        cb(JSON.parse(raw));
+                    }
                 }
             });
         }
