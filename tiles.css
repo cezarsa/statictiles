@@ -54,3 +54,7 @@ body {
     background-color: #333;
     position: absolute;
 }
+
+.palette-tile.rotated img {
+    transform: rotate(180deg);
+}

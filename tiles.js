@@ -2,6 +2,8 @@ var files = [
     "img/amor1-4.png",
     "img/banana-3.png",
     "img/brilho-8.png",
+    "img/brilho2-2.png",
+    "img/brilho3-2.png",
     "img/buen-1.png",
     "img/cafe1-10.png",
     "img/cafe2-9.png",
@@ -9,23 +11,23 @@ var files = [
     "img/cafe4-11.png",
     "img/cereja-5.png",
     "img/coqueiro-2.png",
-    "img/create-9.png",
+    "img/create-10.png",
     "img/daluz-2.png",
     "img/disco1-8.png",
     "img/disco2-7.png",
     "img/disco3-7.png",
     "img/disco4-11.png",
-    "img/enjoy-12.png",
+    "img/enjoy-13.png",
     "img/fita1-2.png",
     "img/fita2-6.png",
     "img/fita3-5.png",
     "img/fita4-3.png",
-    "img/foto-12.png",
+    "img/foto-13.png",
     "img/gato1-9.png",
     "img/gato2-12.png",
     "img/gato3-13.png",
     "img/gato4-21.png",
-    "img/grlpwr-5.png",
+    "img/grlpwr-7.png",
     "img/guter-1.png",
     "img/hello-2.png",
     "img/hipls-2.png",
@@ -42,10 +44,10 @@ var files = [
     "img/prala-2.png",
     "img/rofl-2.png",
     "img/sonhe-6.png",
-    "img/vitr1-6.png",
-    "img/vitr2-6.png",
-    "img/vitr3-5.png",
-    "img/vitr4-9.png"
+    "img/vitr1-7.png",
+    "img/vitr2-7.png",
+    "img/vitr3-6.png",
+    "img/vitr4-10.png"
 ]
 
 var scale = 3.5,
@@ -95,14 +97,22 @@ function setStyle() {
     document.querySelector("head").appendChild(style);
 }
 
-function doTileImage(file, tileName, i) {
+function doTileImage(file, tileName, i, rotated) {
     var query = `.palette-tile[data-tile-name='${tileName}'][data-tile-count-idx='${i}']`
     var el = document.querySelector(query);
     if (el) {
+        if (rotated) {
+            el.className = "tile palette-tile rotated";
+        } else {
+            el.className = "tile palette-tile";
+        }
         return el
     }
     var imgDiv = document.createElement("div");
     imgDiv.className = "tile palette-tile";
+    if (rotated) {
+        imgDiv.className += " rotated";
+    }
     imgDiv.setAttribute('data-tile-name', tileName);
     imgDiv.setAttribute('data-tile-count-idx', i);
     var img = document.createElement("img")
@@ -120,7 +130,7 @@ function doTileAreaMain(i, j) {
     var div = document.createElement("div");
     div.setAttribute('data-i', i);
     div.setAttribute('data-j', j);
-    div.className = "tile tile-area tile-" + i + "-" + j;
+    div.className = "tile tile-area tile-area-grid tile-" + i + "-" + j;
     if (i < cutHeight && j < cutWidth) {
         div.className += " tile-ignored";
     }
@@ -182,7 +192,7 @@ function repositionTiles(tiles, save) {
                     j = t.used[idx].j;
                 var tileArea = doTileAreaMain(i, j);
                 if (tileArea) {
-                    tileArea.appendChild(doTileImage(t.filename, tileName, idx));
+                    tileArea.appendChild(doTileImage(t.filename, tileName, idx, t.used[idx].rotated));
                 }
             } else {
                 var tileArea = doTileAreaPalette(tileName, idx);
@@ -200,6 +210,27 @@ function startDragdrop(tiles) {
         element: '.palette-tile',
         targets: '.tile-area'
     }, (dom, api) => {
+        dom.addEventListener('click', (event) => {
+            if (!event.shiftKey) {
+                return;
+            }
+            var target = event.target.closest('.tile-area-grid');
+            if (!target) {
+                return
+            }
+            var tile = target.querySelector('.palette-tile');
+            if (!tile) {
+                return
+            }
+            var tileName = tile.dataset.tileName;
+            var tileCountIdx = parseInt(tile.dataset.tileCountIdx);
+            if (!tiles[tileName].used[tileCountIdx]) {
+                tiles[tileName].used[tileCountIdx] = {};
+            }
+            tiles[tileName].used[tileCountIdx].rotated = !tiles[tileName].used[tileCountIdx].rotated;
+            repositionTiles(tiles);
+            saveTilesStorage(tiles);
+        })
         dom.addEventListener('drop', (event) => {
             var target = event.target.closest('.tile-area');
             if (target.closest('.tile-ignored')) {
@@ -225,7 +256,11 @@ function startDragdrop(tiles) {
             } else {
                 var i = parseInt(target.dataset.i),
                     j = parseInt(target.dataset.j);
-                tiles[tileName].used[tileCountIdx] = { i: i, j: j };
+                if (!tiles[tileName].used[tileCountIdx]) {
+                    tiles[tileName].used[tileCountIdx] = {};
+                }
+                tiles[tileName].used[tileCountIdx].i = i
+                tiles[tileName].used[tileCountIdx].j = j
             }
             repositionTiles(tiles);
             saveTilesStorage(tiles);
@@ -246,7 +281,12 @@ function loadTilesStorage(tilesToMerge) {
     }
     if (storageTiles) {
         for (var k in storageTiles) {
+            var oldTile = tilesToMerge[k];
             tilesToMerge[k] = storageTiles[k];
+            if (oldTile) {
+                tilesToMerge[k].filename = oldTile.filename;
+                tilesToMerge[k].count = oldTile.count;
+            }
         }
     }
     return tilesToMerge;
