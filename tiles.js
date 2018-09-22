@@ -271,48 +271,68 @@ function startDragdrop(tiles) {
 function saveTilesStorage(tiles) {
     var tilesStr = JSON.stringify(tiles);
     localStorage.setItem("tiles", tilesStr);
-    history.pushState({}, null, "?tiles=" + btoa(tilesStr));
+    LZWAsync.compress({
+        input: tilesStr,
+        output: function (output) {
+            var baseOutput = encodeURIComponent(Base64.encode(output));
+            history.pushState({}, null, "?tiles=" + baseOutput);
+        }
+    });
 }
 
-function loadTilesStorage(tilesToMerge) {
-    var storageTiles = tilesFromURL();
-    if (!storageTiles) {
-        storageTiles = JSON.parse(localStorage.getItem("tiles"));
-    }
-    if (storageTiles) {
-        for (var k in storageTiles) {
-            var oldTile = tilesToMerge[k];
-            tilesToMerge[k] = storageTiles[k];
-            if (oldTile) {
-                tilesToMerge[k].filename = oldTile.filename;
-                tilesToMerge[k].count = oldTile.count;
+function loadTilesStorage(tilesToMerge, cb) {
+    tilesFromURL((storageTiles) => {
+        if (!storageTiles) {
+            storageTiles = JSON.parse(localStorage.getItem("tiles"));
+        }
+        if (storageTiles) {
+            for (var k in storageTiles) {
+                var oldTile = tilesToMerge[k];
+                tilesToMerge[k] = storageTiles[k];
+                if (oldTile) {
+                    tilesToMerge[k].filename = oldTile.filename;
+                    tilesToMerge[k].count = oldTile.count;
+                }
             }
         }
-    }
-    return tilesToMerge;
+        cb();
+    });
 }
 
-function tilesFromURL() {
+function tilesFromURL(cb) {
     var urlParams = new URLSearchParams(window.location.search);
     var tilesStr = urlParams.get('tiles');
     if (tilesStr) {
-        return JSON.parse(atob(tilesStr));
+        try {
+            cb(JSON.parse(atob(tilesStr)));
+        } catch (e) {
+            var raw = Base64.decode(decodeURIComponent(tilesStr));
+            LZWAsync.decompress({
+                input: raw,
+                output: function (output) {
+                    cb(JSON.parse(output));
+                }
+            });
+        }
+        return;
     }
-    return null;
+    cb(null);
 }
 
 window.onpopstate = () => {
-    loadTilesStorage(gTiles);
-    repositionTiles(gTiles);
+    loadTilesStorage(gTiles, () => {
+        repositionTiles(gTiles);
+    });
 }
 
 window.addEventListener('load', function () {
     setStyle();
     var tiles = loadTiles();
-    tiles = loadTilesStorage(tiles);
-    drawTilesPalette(tiles);
-    drawPattern();
-    repositionTiles(tiles);
-    startDragdrop(tiles);
+    loadTilesStorage(tiles, () => {
+        drawTilesPalette(tiles);
+        drawPattern();
+        repositionTiles(tiles);
+        startDragdrop(tiles);
+    });
 });
 
